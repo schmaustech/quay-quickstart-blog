@@ -1,4 +1,7 @@
-# **Deploy Quay on Cluster0**
+# **Quintessential Quay Quickstart**
+
+Red Hat Quay is a secure, private container registry that builds, analyzes and distributes container images. It provides a high level of automation and customization. Red Hat Quay is available via a deployed Operator in OpenShift and as a standalone component on a server.  In this blog we will focus on the deployment method using the operator on OpenShift and do all of the installation via the command line.
+
 
 
 To begin the deployment process of Quay we first need to create a subscription yaml file.  Unlike the previous RHACM install we do not need to create a namespace or operator group since the Quay operator will install into the already created openshift-operators namespace.
