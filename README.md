@@ -352,6 +352,6 @@ spec:
     source: quay.io/openshift-release-dev/ocp-v4.0-art-dev
 ~~~
 
-When the mirroring is completed save the output for the ImageContentSourcePolicy as that will be used when depoying any clusters and point them to the Quay registry for the OpenShift 4.10.10 images.
+When the mirroring is completed save the output for the ImageContentSourcePolicy as that will be used when depoying any clusters and point them to the Red Hat Quay registry for the OpenShift 4.10.10 images.
 
 Hopefully this blog provided some ideas on what is possible when deploying Red Hat Quay from a command line scenario and while this blog does not encasulate all customer use cases and scenarios it does provide a good base to build upon for those advanced scenarios.
