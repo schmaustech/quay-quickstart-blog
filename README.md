@@ -92,47 +92,40 @@ After about 3-5 minutes we can validate that Quay is running by running the foll
 
 ~~~bash
 $ oc get pods -n quay-poc
-NAME                                               READY   STATUS      RESTARTS       AGE
-poc-registry-clair-app-6bdf6d4dbb-296ps            1/1     Running     0              59s
-poc-registry-clair-app-6bdf6d4dbb-2d9wc            1/1     Running     0              69s
-poc-registry-clair-postgres-7d9c8bdc9b-pb5bv       1/1     Running     1 (112s ago)   2m6s
-poc-registry-quay-app-785b4588d6-gmf94             1/1     Running     1 (62s ago)    69s
-poc-registry-quay-app-785b4588d6-kw5b5             1/1     Running     0              69s
-poc-registry-quay-app-upgrade-5lwck                0/1     Completed   0              76s
-poc-registry-quay-config-editor-6449998bb8-2p4r7   1/1     Running     0              69s
-poc-registry-quay-database-68764f57d5-9rhxn        1/1     Running     0              2m6s
-poc-registry-quay-mirror-6f6bfbf54c-9tw84          1/1     Running     0              59s
-poc-registry-quay-mirror-6f6bfbf54c-vhss8          1/1     Running     0              59s
-poc-registry-quay-postgres-init-mcl56              0/1     Completed   0              78s
-poc-registry-quay-redis-796f46d85f-79527           1/1     Running     0              2m6s
+NAME                                              READY   STATUS      RESTARTS        AGE
+poc-registry-clair-app-6c64748b8b-6j7x6           1/1     Running     0               2m18s
+poc-registry-clair-app-6c64748b8b-htt2q           1/1     Running     0               2m7s
+poc-registry-clair-postgres-5d66c9856c-8ftdt      1/1     Running     1 (5m41s ago)   5m50s
+poc-registry-quay-app-f9784fd67-hvtwg             1/1     Running     0               2m18s
+poc-registry-quay-app-f9784fd67-v7q4n             1/1     Running     0               2m18s
+poc-registry-quay-app-upgrade-jsk6k               0/1     Completed   0               2m26s
+poc-registry-quay-config-editor-6b4b8df78-4kntq   1/1     Running     0               2m18s
+poc-registry-quay-database-f7f95c644-nwcsf        1/1     Running     0               5m50s
+poc-registry-quay-mirror-6c799c6d6f-b5nmc         1/1     Running     0               2m16s
+poc-registry-quay-mirror-6c799c6d6f-n8g78         1/1     Running     0               2m5s
+poc-registry-quay-postgres-init-hkjt5             0/1     Completed   0               2m29s
+poc-registry-quay-redis-f8b57fc77-9t9sb           1/1     Running     0               5m50s
 ~~~
 
-At this point we have a working Quay deployment but we need to do a few configuration steps in order to establish a registry we can sync the OpenShift images to.   Before we can go through those steps however we need to ensure we have a few tools we will leverage: jq, podman and oc.
-
-First lets install jq using the brew command:
+At this point we have a working Quay deployment but we need to do a few configuration steps in order to establish a registry we can use to perform push/pulls against.   Before we can go through those steps however we need to ensure we have a few tools we will leverage: jq, podman, curl and oc:
 
 ~~~bash
-
-~~~
-
-Next lets install podman via brew.  Unlike jq, podman has a lot more dependencies to install it!
-
-~~~bash
-
-~~~
-
-And finally the oc command for Mac can be downloaded here: https://console.redhat.com/openshift/downloads   I just decided to leave it in my download directory and place the path in my PATH variable:
-
-~~~bash
+$ which podman
+/usr/bin/podman
+$ which jq
+/usr/bin/jq
 $ which oc
-/Users/bschmaus/Downloads/oc
+/usr/local/bin/oc
+$ which curl
+/usr/bin/curl
 ~~~
 
-With our tools in place we can now begin the configuration which we will do all via the Quay API.
+If any of the tools are not installed above please refer to the documentation on how to install or obtain them for the operating system being used to 
 
-Create initial quayadmin
+With our tools in place we can now begin the configuration of Quay which we will do via the Quay API.  The first step is to create the initial quayadmin user.  We will use curl and a post to send the json data payload to Quay.  Inside this payload will be the username, password, email and access token flag.
+
 ~~~bash
-$ curl -X POST -k  https://poc-registry-quay-quay-poc.apps.magic-metal-cluster.simcloud.apple.com/api/v1/user/initialize --header 'Content-Type: application/json' --data '{ "username": "quayadmin", "password":"password", "email": "quayadmin@example.com", "access_token": true}'
+$ curl -X POST -k  https://poc-registry-quay-quay-poc.apps.magic-metal-cluster.simcloud.apple.com/api/v1/user/initialize --header 'Content-Type: application/json' --data '{ "username": "quayadmin", "password":"password", "email": "quayadmin@schmaustech.com", "access_token": true}'
 
 Output:
 {"access_token":"82HLQR6XH0YPGZVDYOZPVTB1ZAF6J0DBEAQICWSV","email":"quayadmin@example.com","encrypted_password":"2Fio6NQe8EcgpwuAR/lh8LXPIMOVszLljmfVKJMim9DCEUO/zT2iUBjcjO4Rf/yB","username":"quayadmin"}
