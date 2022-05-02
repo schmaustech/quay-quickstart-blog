@@ -246,7 +246,7 @@ weG2mtYGqFVksEs4fsxD2Q==
 -----END CERTIFICATE-----
 ~~~
 
-Next lets take the username and encrpyted password variables we set earlier and base64 encoded them into another variable:
+Next lets take the username and encrpyted password variables we set earlier and base64 encoded them into the variabled BASE64AUTH:
 
 ~~~bash
 $ BASE64AUTH=`echo $QUAYUSERNAME:$QUAYPASSWORD | base64`
@@ -269,7 +269,7 @@ Now take the quay-secret.json and merge it with an existing pull-secret.json tha
 $ cat ~/pull-secret.json | jq ".auths += {`cat ~/quay-secret.json`}" > ~/quay-merged-pull-secret.json
 ~~~
 
-Now we have a quay-merged-pull-secret.json file which contains the credentials to pull images from Quay.io for OpenShift and also have credentials to push those images into our local Quay openshift4 repository.  Before we can actually execute the mirroring though we need to set a few more variables to tell the mirror command what release we are mirroring, the local registry and repository name and where to retrieve those images from along with our quay-merged-pull-secret.json:
+Now we have a quay-merged-pull-secret.json file which contains the credentials to pull images from Quay.io for OpenShift and also have credentials to push/pull those images into our local Red Hat Quay openshift4 repository.  Before we can actually execute the mirroring though we need to set a few more variables to tell the mirror command what release we are mirroring, the local registry and repository name and where to retrieve those images from along with our quay-merged-pull-secret.json:
 
 ~~~bash
 $ OCP_RELEASE=4.10.10
@@ -281,7 +281,7 @@ $ RELEASE_NAME="ocp-release"
 $ ARCHITECTURE='x86_64'
 ~~~
 
-At this point we are ready to mirror the OpenShift images to our local Quay registry.  We can do this with the oc adm release mirror command and by adding the --certificate-authority flag on the end because we are using a self signed cert.  However due to an active [BZ:2033212 ](https://bugzilla.redhat.com/show_bug.cgi?id=2033212) this method will not work yet.
+At this point we are ready to mirror the OpenShift images to our local Red Hat Quay registry.  We can do this with the oc adm release mirror command and by adding the --certificate-authority flag on the end because we are using a self signed cert.  However due to an active [BZ:2033212 ](https://bugzilla.redhat.com/show_bug.cgi?id=2033212) this method will not work yet.
 
 ~~~bash
 oc adm release mirror -a ${LOCAL_SECRET_JSON} --from=quay.io/${PRODUCT_REPO}/${RELEASE_NAME}:${OCP_RELEASE}-${ARCHITECTURE} --to=${LOCAL_REGISTRY}/${LOCAL_REPOSITORY} --to-release-image=${LOCAL_REGISTRY}/${LOCAL_REPOSITORY}:${OCP_RELEASE}-${ARCHITECTURE} --certificate-authority=./quay-ca/ca.crt
@@ -323,7 +323,7 @@ Update image:  poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/openshift4/
 Mirror prefix: poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/openshift4/openshift4
 Mirror prefix: poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/openshift4/openshift4:4.10.10-x86_64
 
-To use the new mirrored repository to install, add the following section to the install-config.yaml:
+To use the mirrored repository to install, add the following section to the install-config.yaml:
 
 imageContentSources:
 - mirrors:
@@ -351,3 +351,5 @@ spec:
 ~~~
 
 When the mirroring is completed save the output for the ImageContentSourcePolicy as that will be used when depoying any clusters and point them to the Quay registry for the OpenShift 4.10.10 images.
+
+Hopefully this blog provided some ideas on what is possible when deploying Red Hat Quay from a command line scenario and while this blog does not encasulate all customer use cases and scenarios it does provide a good base to build upon for those advanced scenarios.
