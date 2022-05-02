@@ -120,9 +120,9 @@ $ which curl
 /usr/bin/curl
 ~~~
 
-If any of the tools are not installed above please refer to the documentation on how to install or obtain them for the operating system being used to 
+If any of the tools are not installed above please refer to the documentation on how to install or obtain them for the operating system being used to step through this example in the blog.
 
-With our tools in place we can now begin the configuration of Quay which we will do via the Quay API.  The first step is to create the initial quayadmin user.  We will use curl and a post to send the json data payload to Quay.  Inside this payload will be the username, password, email and access token flag.
+With our tools in place we can now begin the configuration of Quay which we will do via the Quay API.  The first step is to create the initial quayadmin user.  We will use curl and a post to send the json data payload to Quay.  Inside this payload will be the username, password, email and access token flag:
 
 ~~~bash
 $ curl -X POST -k  https://poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/api/v1/user/initialize --header 'Content-Type: application/json' --data '{ "username": "quayadmin", "password":"password", "email": "quayadmin@schmaustech.com", "access_token": true}'
@@ -131,13 +131,13 @@ Output:
 {"access_token":"OWE7BAOYNJMUGFS71DRKROXGW6RDD5UMNIHVMDSE","email":"quayadmin@schmaustech.com","encrypted_password":"usLgMuipLJyeMDxFg/soq2ZF2s6e8dhiRnQ1cii2wwbMEkH7Irein5yglpnnNQmZ","username":"quayadmin"}
 ~~~
 
-Lets take the access token and set it to a variable so we can run the further commands using the token:
+When we created the quayadmin we got an access token back in the output.  This is access token is short lived but can be useful for configuring the rest of the API steps below.  Because of this lets go ahead and assign the access token to the variable TOKEN:
 
 ~~~bash
 TOKEN=OWE7BAOYNJMUGFS71DRKROXGW6RDD5UMNIHVMDSE
 ~~~
 
-Now that we have set the access token lets move onto creating a few more things for our registry configuration.   The first thing we need is a Quay organization. Organizations provide a way of sharing repositories under a common namespace that does not belong to a single user, but rather to many users in a shared setting (such as a company).  Again we will create this via the curl to access the API and in this example call the organization openshift4:
+Now that we have set the access token lets move onto creating a few more things for our Quay registry configuration.   One item we need is a Quay organization. Organizations provide a way of sharing repositories under a common namespace that does not belong to a single user, but rather to many users in a shared setting (such as a company).  Again we will create this via a curl and post via the API.  In this example the organization is called openshift4:
 
 ~~~bash
 $  curl -X POST -k --header 'Content-Type: application/json' -H "Authorization: Bearer $TOKEN" https://poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/api/v1/organization/ --data '{"name": "openshift4", "email": "openshift4@schmaustech.com"}'
@@ -146,7 +146,7 @@ Output:
 "Created"
 ~~~
 
-Inside the organization we just created we can now create a repository.  The repository is created under the organization to store the actual images for the various containers needed.  In this example we will also call the repository openshift4 and use curl to access the API:
+Inside the organization we just created we can now create a repository.  The repository is created under the organization to store the actual images for the various applications one might store in a registry.  In this example we will also call the repository openshift4 and use curl and post via the API.  The json data payload in this example is the namespace(organization), repository, visibility status(public or private), a brief description which we left empty and the kind of repository:
 
 ~~~bash
 $  curl -X POST -k --header 'Content-Type: application/json' -H "Authorization: Bearer $TOKEN" https://poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/api/v1/repository --data '{"namespace":"openshift4","repository":"openshift4","visibility":"public","description":"","repo_kind":"image"}'
@@ -155,7 +155,7 @@ Output:
 {"namespace": "openshift4", "name": "openshift4", "kind": "image"}
 ~~~
 
-In order to get images into the repository we just created we need to have a user and while we have the quayadmin user already created we really should create another user that will be the user to pull/push images into our openshift4 repository.  In the example below we will create a user called openshift via curl and the API:
+In order to get images into the repository we just created we need to have a user associated to the repository.  While we have the quayadmin user already created we really should create another user that will be the user to pull/push images into our openshift4 repository.  In the example below we will create a user called openshift using curl and post via the API.  The json data payload will contain the username, and email address associated to user and the access token flag:
 
 ~~~bash
 $  curl -X POST -k  https://poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/api/v1/superuser/users/ -H "Authorization: Bearer $TOKEN" --header 'Content-Type: application/json' --data '{ "username": "openshift", "email": "openshift@schmaustech.com", "access_token": true}'
@@ -164,14 +164,14 @@ Output:
 {"username": "openshift", "email": "openshift@schmaustech.com", "password": "KUQ92HPRIAG9O2FQBA47879C28CDJ932", "encrypted_password": "UUNQLLSlBHq9Mfl1hKv22Ant17SZ5IdayZqzmArVXm9xqQo5to38q+uuP1zp9lUrJ4sFOZ/bYtvOhiUCrhSeSyWkBnoeEqF3vzEq89B0Brg="}
 ~~~
 
-Lets take the above users encrypted password and set it along with the username in a few variables we will use it to create a pull-secret later on for this user that will be required in order to push/pull images into the openshift repository:
+Upon creation of the user we get get an encrypted password back for that user.   We are going to assign the username and encrypted password to a couple of variables which we will use later to generate a pull secret for this Quay registry:
 
 ~~~bash
 QUAYUSERNAME=openshift
 QUAYPASSWORD=UUNQLLSlBHq9Mfl1hKv22Ant17SZ5IdayZqzmArVXm9xqQo5to38q+uuP1zp9lUrJ4sFOZ/bYtvOhiUCrhSeSyWkBnoeEqF3vzEq89B0Brg=
 ~~~
 
-After creating our user and setting our variables we now need to associate the to the organization we created via curl and the API:
+After creating our user and setting our variables we now need to associate the user to the organization we created.  We will do this using a curl and put command against the organization/owner/members path and specifying the username at the end:
 
 ~~~bash
 $  curl -X PUT -k  https://poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/api/v1/organization/openshift4/team/owners/members/openshift -H "Authorization: Bearer $TOKEN" --header 'Content-Type: application/json' --data '{}'
@@ -180,7 +180,7 @@ Output:
 {"name": "openshift", "kind": "user", "is_robot": false, "avatar": {"name": "openshift", "hash": "0429fc01dc57217bf6282f0a95b6b23f0a3f0bc11b871711170b0a57d65a3644", "color": "#2ca02c", "kind": "user"}, "invited": false}
 ~~~
 
-We will also need to give this user a role on the repository so they have the ability to push/pull images after they authenticate:
+We will also need to give this user a role on the repository.  Roles can be read, write or admin and in our example we are going to give the openshift user full admin rights this repository.   We will do this again using a curl and put command via the API.   We will also send along a json payload with the role defined in it:
 
 ~~~bash
 $  curl -X PUT -k  https://poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/api/v1/repository/openshift4/openshift4/permissions/user/openshift -H "Authorization: Bearer $TOKEN" --header 'Content-Type: application/json' --data '{ "role": "admin"}'
@@ -309,9 +309,41 @@ uploading: poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/openshift4/open
 uploading: poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/openshift4/openshift4 sha256:4dee79d6f4cb4d991a8c44cbc5f7ce90bc70672c8ab1f901af6ace6ea4c39244 598.3KiB
 uploading: poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/openshift4/openshift4 sha256:237bfbffb5f297018ef21e92b8fede75d3ca63e2154236331ef2b2a9dd818a02 79.51MiB
 (...)
+sha256:054fbaac8295dada04effbbef8d8793dc0e52f71183b5d76a7396ff362180f41 poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/openshift4/openshift4:4.10.10-x86_64-ironic
+sha256:3888e5e253b8caf99bc6517f98f4de6f2b39548c1bcf6b3a92b0ad0ac0ba72ed poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/openshift4/openshift4:4.10.10-x86_64-machine-os-content
+sha256:e5b50f23be5b64f771e3e1cc965dccb06d097394cbf8d75cb59e37c91e332eb6 poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/openshift4/openshift4:4.10.10-x86_64-multus-networkpolicy
+info: Mirroring completed in 18m11.38s (11.54MB/s)
+
+Success
+Update image:  poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/openshift4/openshift4:4.10.10-x86_64
+Mirror prefix: poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/openshift4/openshift4
+Mirror prefix: poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/openshift4/openshift4:4.10.10-x86_64
+
+To use the new mirrored repository to install, add the following section to the install-config.yaml:
+
+imageContentSources:
+- mirrors:
+  - poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/openshift4/openshift4
+  source: quay.io/openshift-release-dev/ocp-release
+- mirrors:
+  - poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/openshift4/openshift4
+  source: quay.io/openshift-release-dev/ocp-v4.0-art-dev
 
 
+To use the new mirrored repository for upgrades, use the following to create an ImageContentSourcePolicy:
 
+apiVersion: operator.openshift.io/v1alpha1
+kind: ImageContentSourcePolicy
+metadata:
+  name: example
+spec:
+  repositoryDigestMirrors:
+  - mirrors:
+    - poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/openshift4/openshift4
+    source: quay.io/openshift-release-dev/ocp-release
+  - mirrors:
+    - poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/openshift4/openshift4
+    source: quay.io/openshift-release-dev/ocp-v4.0-art-dev
 ~~~
 
 When the mirroring is completed save the output for the ImageContentSourcePolicy as that will be used when depoying any clusters and point them to the Quay registry for the OpenShift 4.10.10 images.
