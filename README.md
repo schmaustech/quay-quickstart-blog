@@ -1,10 +1,10 @@
 # **Quintessential Red Hat Quay Quickstart**
 
-Red Hat Quay is a secure, private container registry that builds, analyzes and distributes container images. It provides a high level of automation and customization. Red Hat Quay is available via a deployed Operator in OpenShift and as a standalone component on a server.  In this blog we will focus on the deployment method using the operator on OpenShift and do all of the installation via the command line.
+Red Hat Quay is a secure, private container registry that builds, analyzes and distributes container images. It provides a high level of automation and customization. Red Hat Quay is available via a deployed Operator in OpenShift or as a standalone component on a server.  In this blog we will focus on the deployment method using the operator on OpenShift and do all of the installation via the command line.  Note that this blog is not the only way to deploy Red Hat Quay but rather an opinated method that provides an example of using the command line along with the Quay API to get a Red Hat Quay up and operating quickly.
 
+Before we dive into the steps of creating our Red Hat Quay instance we want to cover the environment we will be using for this demonstration.  The environment is a Red Hat OpenShift 4.10.10 three node compact cluster where the nodes are acting as both the control plane and workers.  For convenience we have also installed the OpenShift Data Foundation across the the three nodes to provide default storage for the cluster.  Since OpenShift Data Foundation provides Noobaa Red Hat Quay will be able to take advantage and it instead of deploying its own instance of Noobaa.
 
-
-To begin the deployment process of Quay we first need to create a subscription yaml file.  
+The first step to deploying Red Hat Quay is to deploy the operator and that first requires building a subscription custom resource file like the one below:
 
 ~~~bash
 $ cat << EOF > ~/quay-operator-subscription.yaml
@@ -19,36 +19,36 @@ spec:
   name: quay-operator
   source: redhat-operators
   sourceNamespace: openshift-marketplace
-  startingCSV: quay-operator.v3.6.4
+  startingCSV: quay-operator.v3.6.6
 EOF
 ~~~
 
-Once we have the subcription yaml created lets go ahead and create the subscription on cluster0:
+Once we have subscription custom reosurce file created lets go ahead and create the subscription on our cluster:
 
 ~~~bash
 $ oc create -f ~/quay-operator-subscription.yaml 
 subscription.operators.coreos.com/quay-operator created
 ~~~
 
-With the subscription created we can validate that the operator is running by looking at both the running pod and subscription:
+We can validate that the subscription was successful by checking if the operator is running and confirming the subscription is present:
 
 ~~~bash
 $ oc get pods -A|grep quay
-openshift-operators                  quay-operator.v3.6.4-64d4cc85d8-kgd45                             1/1     Running     0               30s
+openshift-operators                                quay-operator.v3.6.6-5945bfbbc9-kh692                             1/1     Running     0          48s
 
 $ oc get sub -n openshift-operators quay-operator
 NAME            PACKAGE         SOURCE             CHANNEL
 quay-operator   quay-operator   redhat-operators   stable-3.6
 ~~~
 
-With the Quay operator running we next need to create a namespace where the Quay registry will run.
+With the Quay operator running we next need to create a namespace where the Quay registry will run the require pods:
 
 ~~~bash
 $ oc create namespace quay-poc
 namespace/quay-poc created
 ~~~
 
-With the namespace created we can move onto generating an initial config.yaml for Quay.   In this yaml we are going to specify a quayadmin super and enable the ability to use the API of Quay:
+Once the namespace created we can move onto generating an initial config.yaml for Red Hat Quay.   In this configuration we are going to specify a quayadmin super and enable the ability to use the Quay API:
 
 ~~~bash
 $ cat << EOF > ~/config.yaml 
@@ -60,14 +60,14 @@ FEATURE_USER_CREATION: false
 EOF
 ~~~
 
-We can now take the config.yaml we created and generate a secret config bundle which we will store in the quay-poc namespace we created:
+Now lets take the config.yaml we created and generate a secret config bundle which we will store in the quay-poc namespace we created:
 
 ~~~bash
-$ oc create secret generic --from-file config.yaml=config.yaml init-config-bundle-secret -n quay-poc 
+$ $ oc create secret generic --from-file config.yaml=config.yaml init-config-bundle-secret -n quay-poc
 secret/init-config-bundle-secret created
 ~~~
 
-With the init-config-bundle-secret created we will now reference it in our quay-registry custom resource file.  For the POC we are keeping the custom resource file simple and allowing the operator to control every aspect of the Quay deployment.  However if one chose to maybe external S3 storage or an external postgres DB this would be the file where those modifications could be made.  Since we have ODF installed on cluster0 the Quay operator will leverage both block and S3 storage from ODF to meet the needs of Quay and no additional configuration is necessary.  
+With the init-config-bundle-secret created we will now reference it in our quay-registry custom resource file.  For this example we are keeping the custom resource file simple and allowing the operator to control every aspect of the Quay deployment.  However if one chose to use external S3 storage or an external postgres DB this would be the file where those modifications could be made.  
 
 ~~~bash
 $ cat << EOF > ~/quay-registry.yaml
@@ -81,7 +81,7 @@ spec:
 EOF
 ~~~
 
-Take the custom resource file we created and create it on cluster0
+Take the quay-registry custom resource file we created and apply it to our cluster:
 
 ~~~bash
 $ oc create -f ~/quay-registry.yaml
