@@ -7,7 +7,7 @@ Red Hat Quay is a secure, private container registry that builds, analyzes and d
 To begin the deployment process of Quay we first need to create a subscription yaml file.  
 
 ~~~bash
-~ % cat << EOF > ~/quay-operator-subscription.yaml
+$ cat << EOF > ~/quay-operator-subscription.yaml
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
@@ -26,17 +26,17 @@ EOF
 Once we have the subcription yaml created lets go ahead and create the subscription on cluster0:
 
 ~~~bash
-~ % oc create -f ~/quay-operator-subscription.yaml 
+$ oc create -f ~/quay-operator-subscription.yaml 
 subscription.operators.coreos.com/quay-operator created
 ~~~
 
 With the subscription created we can validate that the operator is running by looking at both the running pod and subscription:
 
 ~~~bash
-~ % oc get pods -A|grep quay
+$ oc get pods -A|grep quay
 openshift-operators                  quay-operator.v3.6.4-64d4cc85d8-kgd45                             1/1     Running     0               30s
 
-~ % oc get sub -n openshift-operators quay-operator
+$ oc get sub -n openshift-operators quay-operator
 NAME            PACKAGE         SOURCE             CHANNEL
 quay-operator   quay-operator   redhat-operators   stable-3.6
 ~~~
@@ -44,14 +44,14 @@ quay-operator   quay-operator   redhat-operators   stable-3.6
 With the Quay operator running we next need to create a namespace where the Quay registry will run.
 
 ~~~bash
-~ % oc create namespace quay-poc
+$ oc create namespace quay-poc
 namespace/quay-poc created
 ~~~
 
 With the namespace created we can move onto generating an initial config.yaml for Quay.   In this yaml we are going to specify a quayadmin super and enable the ability to use the API of Quay:
 
 ~~~bash
-~ % cat << EOF > ~/config.yaml 
+$ cat << EOF > ~/config.yaml 
 FEATURE_USER_INITIALIZE: true
 BROWSER_API_CALLS_XHR_ONLY: false
 SUPER_USERS:
@@ -63,14 +63,14 @@ EOF
 We can now take the config.yaml we created and generate a secret config bundle which we will store in the quay-poc namespace we created:
 
 ~~~bash
-~ % oc create secret generic --from-file config.yaml=config.yaml init-config-bundle-secret -n quay-poc 
+$ oc create secret generic --from-file config.yaml=config.yaml init-config-bundle-secret -n quay-poc 
 secret/init-config-bundle-secret created
 ~~~
 
 With the init-config-bundle-secret created we will now reference it in our quay-registry custom resource file.  For the POC we are keeping the custom resource file simple and allowing the operator to control every aspect of the Quay deployment.  However if one chose to maybe external S3 storage or an external postgres DB this would be the file where those modifications could be made.  Since we have ODF installed on cluster0 the Quay operator will leverage both block and S3 storage from ODF to meet the needs of Quay and no additional configuration is necessary.  
 
 ~~~bash
-~ % cat << EOF > ~/quay-registry.yaml
+$ cat << EOF > ~/quay-registry.yaml
 apiVersion: quay.redhat.com/v1
 kind: QuayRegistry
 metadata:
@@ -84,14 +84,14 @@ EOF
 Take the custom resource file we created and create it on cluster0
 
 ~~~bash
-~ % oc create -f ~/quay-registry.yaml
+$ oc create -f ~/quay-registry.yaml
 quayregistry.quay.redhat.com/poc-registry created
 ~~~
 
 After about 3-5 minutes we can validate that Quay is running by running the following command:
 
 ~~~bash
-~ % oc get pods -n quay-poc
+$ oc get pods -n quay-poc
 NAME                                               READY   STATUS      RESTARTS       AGE
 poc-registry-clair-app-6bdf6d4dbb-296ps            1/1     Running     0              59s
 poc-registry-clair-app-6bdf6d4dbb-2d9wc            1/1     Running     0              69s
@@ -124,7 +124,7 @@ Next lets install podman via brew.  Unlike jq, podman has a lot more dependencie
 And finally the oc command for Mac can be downloaded here: https://console.redhat.com/openshift/downloads   I just decided to leave it in my download directory and place the path in my PATH variable:
 
 ~~~bash
-~ % which oc
+$ which oc
 /Users/bschmaus/Downloads/oc
 ~~~
 
@@ -132,7 +132,7 @@ With our tools in place we can now begin the configuration which we will do all 
 
 Create initial quayadmin
 ~~~bash
-~ % curl -X POST -k  https://poc-registry-quay-quay-poc.apps.magic-metal-cluster.simcloud.apple.com/api/v1/user/initialize --header 'Content-Type: application/json' --data '{ "username": "quayadmin", "password":"password", "email": "quayadmin@example.com", "access_token": true}'
+$ curl -X POST -k  https://poc-registry-quay-quay-poc.apps.magic-metal-cluster.simcloud.apple.com/api/v1/user/initialize --header 'Content-Type: application/json' --data '{ "username": "quayadmin", "password":"password", "email": "quayadmin@example.com", "access_token": true}'
 
 Output:
 {"access_token":"82HLQR6XH0YPGZVDYOZPVTB1ZAF6J0DBEAQICWSV","email":"quayadmin@example.com","encrypted_password":"2Fio6NQe8EcgpwuAR/lh8LXPIMOVszLljmfVKJMim9DCEUO/zT2iUBjcjO4Rf/yB","username":"quayadmin"}
@@ -147,7 +147,7 @@ TOKEN=82HLQR6XH0YPGZVDYOZPVTB1ZAF6J0DBEAQICWSV
 Now that we have set the access token lets move onto creating a few more things for our registry configuration.   The first thing we need is a Quay organization. Organizations provide a way of sharing repositories under a common namespace that does not belong to a single user, but rather to many users in a shared setting (such as a company).  Again we will create this via the curl to access the API and in this example call the organization openshift4:
 
 ~~~bash
-~ %  curl -X POST -k --header 'Content-Type: application/json' -H "Authorization: Bearer $TOKEN" https://poc-registry-quay-quay-poc.apps.magic-metal-cluster.simcloud.apple.com/api/v1/organization/ --data '{"name": "openshift4", "email": "openshift4@example.com"}'
+$  curl -X POST -k --header 'Content-Type: application/json' -H "Authorization: Bearer $TOKEN" https://poc-registry-quay-quay-poc.apps.magic-metal-cluster.simcloud.apple.com/api/v1/organization/ --data '{"name": "openshift4", "email": "openshift4@example.com"}'
 
 Output:
 "Created"
@@ -156,7 +156,7 @@ Output:
 Inside the organization we just created we can now create a repository.  The repository is created under the organization to store the actual images for the various containers needed.  In this example we will also call the repository openshift4 and use curl to access the API:
 
 ~~~bash
-~ %  curl -X POST -k --header 'Content-Type: application/json' -H "Authorization: Bearer $TOKEN" https://poc-registry-quay-quay-poc.apps.magic-metal-cluster.simcloud.apple.com/api/v1/repository --data '{"namespace":"openshift4","repository":"openshift4","visibility":"public","description":"","repo_kind":"image"}'
+$  curl -X POST -k --header 'Content-Type: application/json' -H "Authorization: Bearer $TOKEN" https://poc-registry-quay-quay-poc.apps.magic-metal-cluster.simcloud.apple.com/api/v1/repository --data '{"namespace":"openshift4","repository":"openshift4","visibility":"public","description":"","repo_kind":"image"}'
 
 Output:
 {"namespace": "openshift4", "name": "openshift4", "kind": "image"}
@@ -165,7 +165,7 @@ Output:
 In order to get images into the repository we just created we need to have a user and while we have the quayadmin user already created we really should create another user that will be the user to pull/push images into our openshift4 repository.  In the example below we will create a user called openshift via curl and the API:
 
 ~~~bash
-~ %  curl -X POST -k  https://poc-registry-quay-quay-poc.apps.magic-metal-cluster.simcloud.apple.com/api/v1/superuser/users/ -H "Authorization: Bearer $TOKEN" --header 'Content-Type: application/json' --data '{ "username": "openshift", "email": "openshift@example.com", "access_token": true}'
+$  curl -X POST -k  https://poc-registry-quay-quay-poc.apps.magic-metal-cluster.simcloud.apple.com/api/v1/superuser/users/ -H "Authorization: Bearer $TOKEN" --header 'Content-Type: application/json' --data '{ "username": "openshift", "email": "openshift@example.com", "access_token": true}'
 
 Output:
 {"username": "openshift", "email": "openshift@example.com", "password": "G17KT667IJ82206DF7BIE2C12RQRIYSF", "encrypted_password": "jqDT/R10PUVsxMR6sjoXCCQL1WLmE2sBp6yZloj+oRTLT0IslK/31WgJ/aXiUH/gfAMwo6ZgTO8vp4Cc6E7hZhrpyEIa2JtLv0A+UM7DZmI="}
@@ -181,7 +181,7 @@ QUAYPASSWORD=qDFQgW6q6lT+suKZ3HL1XMrQJG9rG376yhGGIP4Iuf6QUMsg8XzNl/jj8guEAbSbZva
 After creating our user and setting our variables we now need to associate the to the organization we created via curl and the API:
 
 ~~~bash
-~ %  curl -X PUT -k  https://poc-registry-quay-quay-poc.apps.magic-metal-cluster.simcloud.apple.com/api/v1/organization/openshift4/team/owners/members/openshift -H "Authorization: Bearer $TOKEN" --header 'Content-Type: application/json' --data '{}'
+$  curl -X PUT -k  https://poc-registry-quay-quay-poc.apps.magic-metal-cluster.simcloud.apple.com/api/v1/organization/openshift4/team/owners/members/openshift -H "Authorization: Bearer $TOKEN" --header 'Content-Type: application/json' --data '{}'
 
 Output:
 {"name": "openshift", "kind": "user", "is_robot": false, "avatar": {"name": "openshift", "hash": "b1321f59a2be698dd8abc79e4524c6b59a0b40715cfa3db60e291fbab2bd2098", "color": "#1f77b4", "kind": "user"}, "invited": false}
@@ -190,7 +190,7 @@ Output:
 We will also need to give this user a role on the repository so they have the ability to push/pull images after they authenticate:
 
 ~~~bash
-~ %  curl -X PUT -k  https://poc-registry-quay-quay-poc.apps.magic-metal-cluster.simcloud.apple.com/api/v1/repository/openshift4/openshift4/permissions/user/openshift -H "Authorization: Bearer $TOKEN" --header 'Content-Type: application/json' --data '{ "role": "admin"}'
+$  curl -X PUT -k  https://poc-registry-quay-quay-poc.apps.magic-metal-cluster.simcloud.apple.com/api/v1/repository/openshift4/openshift4/permissions/user/openshift -H "Authorization: Bearer $TOKEN" --header 'Content-Type: application/json' --data '{ "role": "admin"}'
 
 Output:
 {"role": "admin", "name": "openshift", "is_robot": false, "avatar": {"name": "openshift", "hash": "b1321f59a2be698dd8abc79e4524c6b59a0b40715cfa3db60e291fbab2bd2098", "color": "#1f77b4", "kind": "user"}, "is_org_member": true}
@@ -201,20 +201,20 @@ This completes all the Quay steps needed for ensuring we have a repository to mi
 First we need to extract the ca.crt from the new Quay installation.  I should note though this is only required when using self-signed certs like we are using in this example.  If the cluster is deployed with certs from a real certificate of authority then this would not be required.  To extract the CA for the self siged cert create the temporary directory of quay-ca and then using the openssl command extract the CA from the site and save as ca.crt:
 
 ~~~bash
-~ % mkdir ~/quay-ca
-~ % openssl s_client -connect poc-registry-quay-quay-poc.apps.magic-metal-cluster.simcloud.apple.com:443 -showcerts </dev/null 2>/dev/null|openssl x509 -outform PEM > ~/quay-ca/ca.crt
+$ mkdir ~/quay-ca
+$ openssl s_client -connect poc-registry-quay-quay-poc.apps.magic-metal-cluster.simcloud.apple.com:443 -showcerts </dev/null 2>/dev/null|openssl x509 -outform PEM > ~/quay-ca/ca.crt
 ~~~
 
 Next lets take the username and encrpyted password variables we set earlier and base64 encoded them into another variable:
 
 ~~~bash
-~ % BASE64AUTH=`echo $QUAYUSERNAME:$QUAYPASSWORD | base64`
+$ BASE64AUTH=`echo $QUAYUSERNAME:$QUAYPASSWORD | base64`
 ~~~
 
 With the BASE64AUTH variable set lets go ahead and create a snippit of quay-secret.json:
 
 ~~~bash
-~ % cat << EOF > ~/quay-secret.json 
+$ cat << EOF > ~/quay-secret.json 
     "poc-registry-quay-quay-poc.apps.magic-metal-cluster.simcloud.apple.com": {
       "auth": "$BASE64AUTH",
       "email": "openshift@example.com"
@@ -225,19 +225,19 @@ EOF
 Now take the quay-secret.json and merge it with an existing pull-secret.json that was retrieved from https://console.redhat.com:
 
 ~~~bash
-~ % cat ~/pull-secret.json | jq ".auths += {`cat ~/quay-secret.json`}" > ~/quay-merged-pull-secret.json
+$ cat ~/pull-secret.json | jq ".auths += {`cat ~/quay-secret.json`}" > ~/quay-merged-pull-secret.json
 ~~~
 
 Now we have a quay-merged-pull-secret.json file which contains the credentials to pull images from Quay.io for OpenShift and also have credentials to push those images into our local Quay openshift4 repository.  Before we can actually execute the mirroring though we need to set a few more variables to tell the mirror command what release we are mirroring, the local registry and repository name and where to retrieve those images from along with our quay-merged-pull-secret.json:
 
 ~~~bash
-~ % OCP_RELEASE=4.10.3
-~ % LOCAL_REGISTRY='poc-registry-quay-quay-poc.apps.magic-metal-cluster.simcloud.apple.com'
-~ % LOCAL_REPOSITORY='openshift4/openshift4'
-~ % PRODUCT_REPO='openshift-release-dev'
-~ % LOCAL_SECRET_JSON='quay-merged-pull-secret.json' 
-~ % RELEASE_NAME="ocp-release"
-~ % ARCHITECTURE='x86_64'
+$ OCP_RELEASE=4.10.3
+$ LOCAL_REGISTRY='poc-registry-quay-quay-poc.apps.magic-metal-cluster.simcloud.apple.com'
+$ LOCAL_REPOSITORY='openshift4/openshift4'
+$ PRODUCT_REPO='openshift-release-dev'
+$ LOCAL_SECRET_JSON='quay-merged-pull-secret.json' 
+$ RELEASE_NAME="ocp-release"
+$ ARCHITECTURE='x86_64'
 ~~~
 
 At this point we are ready to mirror the OpenShift images to our local Quay registry.  We can do this with the oc adm release mirror command and by adding the --certificate-authority flag on the end because we are using a self signed cert.  However due to an active [BZ:2033212 ](https://bugzilla.redhat.com/show_bug.cgi?id=2033212) this method will not work yet.
