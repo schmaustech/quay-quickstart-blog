@@ -41,14 +41,14 @@ NAME            PACKAGE         SOURCE             CHANNEL
 quay-operator   quay-operator   redhat-operators   stable-3.6
 ~~~
 
-With the Quay operator running we next need to create a namespace where the Quay registry will run the require pods:
+With the Quay operator running we next need to create a namespace where the Red Hat Quay registry will run the require pods:
 
 ~~~bash
 $ oc create namespace quay-poc
 namespace/quay-poc created
 ~~~
 
-Once the namespace created we can move onto generating an initial config.yaml for Red Hat Quay.   In this configuration we are going to specify a quayadmin super and enable the ability to use the Quay API:
+Once the namespace created we can move onto generating an initial config.yaml for Red Hat Quay.   In this configuration we are going to specify a quayadmin super and enable the ability to use the Red Hat Quay API:
 
 ~~~bash
 $ cat << EOF > ~/config.yaml 
@@ -67,7 +67,7 @@ $ $ oc create secret generic --from-file config.yaml=config.yaml init-config-bun
 secret/init-config-bundle-secret created
 ~~~
 
-With the init-config-bundle-secret created we will now reference it in our quay-registry custom resource file.  For this example we are keeping the custom resource file simple and allowing the operator to control every aspect of the Quay deployment.  However if one chose to use external S3 storage or an external postgres DB this would be the file where those modifications could be made.  
+With the init-config-bundle-secret created we will now reference it in our quay-registry custom resource file.  For this example we are keeping the custom resource file simple and allowing the operator to control every aspect of the Red Hat Quay deployment.  However if one chose to use external S3 storage or an external postgres DB this would be the file where those modifications could be made.  
 
 ~~~bash
 $ cat << EOF > ~/quay-registry.yaml
@@ -107,7 +107,7 @@ poc-registry-quay-postgres-init-hkjt5             0/1     Completed   0         
 poc-registry-quay-redis-f8b57fc77-9t9sb           1/1     Running     0               5m50s
 ~~~
 
-At this point we have a working Quay deployment but we need to do a few configuration steps in order to establish a registry we can use to perform push/pulls against.   Before we can go through those steps however we need to ensure we have a few tools we will leverage: jq, podman, curl and oc:
+At this point we have a working Red Hat Quay deployment but we need to do a few configuration steps in order to establish a registry we can use to perform push/pulls against.   Before we can go through those steps however we need to ensure we have a few tools we will leverage: jq, podman, curl and oc:
 
 ~~~bash
 $ which podman
@@ -122,7 +122,9 @@ $ which curl
 
 If any of the tools are not installed above please refer to the documentation on how to install or obtain them for the operating system being used to step through this example in the blog.
 
-With our tools in place we can now begin the configuration of Quay which we will do via the Quay API.  The first step is to create the initial quayadmin user.  We will use curl and a post to send the json data payload to Quay.  Inside this payload will be the username, password, email and access token flag:
+With our tools in place we can now begin the configuration of Red Hat Quay which we will do via the Red Hat Quay API.  The Red Hat Quay application programming interface (API) is an OAuth 2 RESTful API that consists of a set of endpoints for adding, displaying, changing and deleting features for Red Hat Quay. 
+
+The first step is to create the initial quayadmin user which also happens to be a superuser.  A superuser is a user account that has extended privileges, including the ability to manage users, organizations and service keys.  They also have the ability to view change logs, query usage logs and create globally visible user messages.  To create the user we will use curl and post to send the json data payload to Red Hat Quay.  Inside this payload will be the username, password, email and access token flag:
 
 ~~~bash
 $ curl -X POST -k  https://poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/api/v1/user/initialize --header 'Content-Type: application/json' --data '{ "username": "quayadmin", "password":"password", "email": "quayadmin@schmaustech.com", "access_token": true}'
@@ -137,7 +139,7 @@ When we created the quayadmin we got an access token back in the output.  This i
 TOKEN=OWE7BAOYNJMUGFS71DRKROXGW6RDD5UMNIHVMDSE
 ~~~
 
-Now that we have set the access token lets move onto creating a few more things for our Quay registry configuration.   One item we need is a Quay organization. Organizations provide a way of sharing repositories under a common namespace that does not belong to a single user, but rather to many users in a shared setting (such as a company).  Again we will create this via a curl and post via the API.  In this example the organization is called openshift4:
+Now that we have set the access token lets move onto creating a few more things for our Red Hat Quay registry configuration.   One item we need is a organization. Organizations provide a way of sharing repositories under a common namespace that does not belong to a single user, but rather to many users in a shared setting (such as a company).  Again we will create this via a curl and post via the API.  In this example the organization is called openshift4:
 
 ~~~bash
 $  curl -X POST -k --header 'Content-Type: application/json' -H "Authorization: Bearer $TOKEN" https://poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/api/v1/organization/ --data '{"name": "openshift4", "email": "openshift4@schmaustech.com"}'
@@ -189,14 +191,16 @@ Output:
 {"role": "admin", "name": "openshift", "is_robot": false, "avatar": {"name": "openshift", "hash": "0429fc01dc57217bf6282f0a95b6b23f0a3f0bc11b871711170b0a57d65a3644", "color": "#2ca02c", "kind": "user"}, "is_org_member": true}
 ~~~
 
-This completes all the Quay steps needed for ensuring we have a repository to mirror the OpenShift images for a disconnected cluster.  Now we need to prepare for the actual mirroring of those images.  
+At this point we have completed all the configuration steps we needed to via the API.  Just to recap we created the quayadmin, an organization, a repository, another user and associated that user to the organization and repository.  Now we can move onto actually putting something into this registry we built.
 
-First we need to extract the ca.crt from the new Quay installation.  I should note though this is only required when using self-signed certs like we are using in this example.  If the cluster is deployed with certs from a real certificate of authority then this would not be required.  To extract the CA for the self siged cert create the temporary directory of quay-ca and then using the openssl command extract the CA from the site and save as ca.crt:
+First we need to extract the ca.crt from the new Red Hat Quay installation.  I should note though this is only required when using self-signed certs like we are using in this example.  If the cluster is deployed with certs from a real certificate of authority then this would not be required.  To extract the CA for the self siged cert create the temporary directory of quay-ca and then using the oc command extract the CA from the site and save as ca.crt:
 
 ~~~bash
 $ mkdir ~/quay-ca
 $ oc get secret -n openshift-ingress $(oc get deployment -n openshift-ingress router-default -o jsonpath='{ .spec.template.spec.volumes[?(@.name=="default-certificate")].secret.secretName }') -o jsonpath='{ .data.tls\.crt }' | base64 -d > ~/quay-ca/ca.crt
 ~~~
+
+Lets confirm we extracted the certificates by looking at the output:
 
 ~~~bash
 $ cat ~/quay-ca/ca.crt
@@ -248,7 +252,7 @@ Next lets take the username and encrpyted password variables we set earlier and 
 $ BASE64AUTH=`echo $QUAYUSERNAME:$QUAYPASSWORD | base64`
 ~~~
 
-With the BASE64AUTH variable set lets go ahead and create a snippit of quay-secret.json:
+With the BASE64AUTH variable set lets go ahead and create a pull secret snippit of quay-secret.json:
 
 ~~~bash
 $ cat << EOF > ~/quay-secret.json 
