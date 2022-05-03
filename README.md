@@ -1,6 +1,6 @@
 # **Quintessential Red Hat Quay Quickstart**
 
-<img src="Logo-Red_Hat-Quay-A-Standard-CMYK.jpg" style="width: 1000px;" border=0/>
+<img src="Logo-Red_Hat-Quay-A-Standard-CMYK.jpg" style="width: 800px;" border=0/>
 
 Red Hat Quay is a secure, private container registry that builds, analyzes and distributes container images. It provides a high level of automation and customization. Red Hat Quay is available via a deployed Operator in OpenShift or as a standalone component on a server.  In this blog we will focus on the deployment method using the operator on OpenShift and do all of the installation via the command line.  Note that this blog is not the only way to deploy Red Hat Quay but rather an opinated method that provides an example of using the command line along with the Quay API to get a Red Hat Quay up and operating quickly.
 
