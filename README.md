@@ -2,11 +2,11 @@
 
 <img src="Logo-Red_Hat-Quay-A-Standard-CMYK.jpg" style="width: 800px;" border=0/>
 
-Red Hat Quay is a secure, private container registry that builds, analyzes and distributes container images. It provides a high level of automation and customization. Red Hat Quay is available via a deployed Operator in OpenShift or as a standalone component on a server.  In this blog we will focus on the deployment method using the operator on OpenShift and do all of the installation via the command line.  Note that this blog is not the only way to deploy Red Hat Quay but rather an opinated method that provides an example of using the command line along with the Quay API to get a Red Hat Quay up and operating quickly.
+Red Hat Quay is a secure, private container registry that builds, analyzes and distributes container images. It provides a high level of automation and customization. Red Hat Quay is available via a deployed Operator in OpenShift or as a standalone component on a server.  In this blog we will focus on the deployment method using the operator on OpenShift and do all of the installation via the command line.  Note that this blog is not the only way to deploy Red Hat Quay but rather an opinated method that provides an example of using the command line along with the Red Hat Quay API to get a Red Hat Quay up and operating quickly.
 
-Before we dive into the steps of creating our Red Hat Quay instance we want to cover the environment we will be using for this demonstration.  The environment is a Red Hat OpenShift 4.10.10 three node compact cluster where the nodes are acting as both the control plane and workers.  For convenience we have also installed the OpenShift Data Foundation across the the three nodes to provide default storage for the cluster.  Since OpenShift Data Foundation provides Noobaa Red Hat Quay will be able to take advantage and it instead of deploying its own instance of Noobaa.
+Before we dive into the steps of creating our Red Hat Quay instance we want to cover the environment we will be using for this demonstration.  The environment is a Red Hat OpenShift 4.10.10 three node compact cluster where the nodes are acting as both the control plane and workers.  For convenience we have also installed the OpenShift Data Foundation across the the three nodes to provide default storage for the cluster.  Since OpenShift Data Foundation provides Noobaa, Red Hat Quay will be able to take advantage and it instead of deploying its own instance of Noobaa.
 
-The first step to deploying Red Hat Quay is to deploy the operator and that first requires building a subscription custom resource file like the one below:
+The first step to deploying Red Hat Quay is to deploy the operator and that requires building a subscription custom resource file like the one shown below:
 
 ~~~bash
 $ cat << EOF > ~/quay-operator-subscription.yaml
@@ -25,7 +25,7 @@ spec:
 EOF
 ~~~
 
-Once we have subscription custom reosurce file created lets go ahead and create the subscription on our cluster:
+Once we have subscription custom resource file created lets go ahead and create the subscription on our cluster:
 
 ~~~bash
 $ oc create -f ~/quay-operator-subscription.yaml 
@@ -43,14 +43,14 @@ NAME            PACKAGE         SOURCE             CHANNEL
 quay-operator   quay-operator   redhat-operators   stable-3.6
 ~~~
 
-With the Quay operator running we next need to create a namespace where the Red Hat Quay registry will run the require pods:
+With the Red Hat Quay operator running we next need to create a namespace where the Red Hat Quay registry will run the require pods:
 
 ~~~bash
 $ oc create namespace quay-poc
 namespace/quay-poc created
 ~~~
 
-Once the namespace created we can move onto generating an initial config.yaml for Red Hat Quay.   In this configuration we are going to specify a quayadmin super and enable the ability to use the Red Hat Quay API:
+Once the namespace created we can move onto generating an initial config.yaml for Red Hat Quay.   In this configuration we are going to specify a quayadmin superuser and enable the ability to use the Red Hat Quay API which will allow us in future steps to configure the quayadmin user and additional requirements for our registry.  Create the config.yaml using the example below:
 
 ~~~bash
 $ cat << EOF > ~/config.yaml 
@@ -90,7 +90,7 @@ $ oc create -f ~/quay-registry.yaml
 quayregistry.quay.redhat.com/poc-registry created
 ~~~
 
-After about 3-5 minutes we can validate that Quay is running by running the following command:
+After about 3-5 minutes we can validate that the pods are running by executing the following command:
 
 ~~~bash
 $ oc get pods -n quay-poc
@@ -126,7 +126,7 @@ If any of the tools are not installed above please refer to the documentation on
 
 With our tools in place we can now begin the configuration of Red Hat Quay which we will do via the Red Hat Quay API.  The Red Hat Quay application programming interface (API) is an OAuth 2 RESTful API that consists of a set of endpoints for adding, displaying, changing and deleting features for Red Hat Quay. 
 
-The first step is to create the initial quayadmin user which also happens to be a superuser.  A superuser is a user account that has extended privileges, including the ability to manage users, organizations and service keys.  They also have the ability to view change logs, query usage logs and create globally visible user messages.  To create the user we will use curl and post to send the json data payload to Red Hat Quay.  Inside this payload will be the username, password, email and access token flag:
+The first step is to initialize the quayadmin user which also happens to be a superuser.  A superuser is a user account that has extended privileges, including the ability to manage users, organizations and service keys.  They also have the ability to view change logs, query usage logs and create globally visible user messages.  To initialize the user we will use curl and post to send the json data payload to Red Hat Quay API.  Inside this payload will be the username, password, email and access token flag:
 
 ~~~bash
 $ curl -X POST -k  https://poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/api/v1/user/initialize --header 'Content-Type: application/json' --data '{ "username": "quayadmin", "password":"password", "email": "quayadmin@schmaustech.com", "access_token": true}'
@@ -141,7 +141,7 @@ When we created the quayadmin we got an access token back in the output.  This i
 TOKEN=OWE7BAOYNJMUGFS71DRKROXGW6RDD5UMNIHVMDSE
 ~~~
 
-Now that we have set the access token lets move onto creating a few more things for our Red Hat Quay registry configuration.   One item we need is a organization. Organizations provide a way of sharing repositories under a common namespace that does not belong to a single user, but rather to many users in a shared setting (such as a company).  Again we will create this via a curl and post via the API.  In this example the organization is called openshift4:
+Now that we have set the access token lets move onto creating a few more items for our Red Hat Quay registry configuration.   One item we need is a organization. Organizations provide a way of sharing repositories under a common namespace that does not belong to a single user, but rather to many users in a shared setting (such as a company).  Again we will create this via a curl and post via the API.  In this example the organization is called openshift4:
 
 ~~~bash
 $  curl -X POST -k --header 'Content-Type: application/json' -H "Authorization: Bearer $TOKEN" https://poc-registry-quay-quay-poc.apps.kni20.schmaustech.com/api/v1/organization/ --data '{"name": "openshift4", "email": "openshift4@schmaustech.com"}'
