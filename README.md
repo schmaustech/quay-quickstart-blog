@@ -65,7 +65,7 @@ EOF
 Now lets take the config.yaml we created and generate a secret config bundle which we will store in the quay-poc namespace we created:
 
 ~~~bash
-$ $ oc create secret generic --from-file config.yaml=config.yaml init-config-bundle-secret -n quay-poc
+$ oc create secret generic --from-file config.yaml=config.yaml init-config-bundle-secret -n quay-poc
 secret/init-config-bundle-secret created
 ~~~
 
